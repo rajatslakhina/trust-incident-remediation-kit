@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux · swift build + test (warnings are errors)
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build -Xswiftc -warnings-as-errors
+      - name: Test
+        run: swift test -Xswiftc -warnings-as-errors
+
+  apple:
+    name: macOS · swift test + iOS Simulator build (incl. SwiftUI)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test on macOS
+        run: swift test
+      - name: Build all products for iOS Simulator
+        run: |
+          xcodebuild build \
+            -scheme TrustRemediation-Package \
+            -destination 'generic/platform=iOS Simulator'
