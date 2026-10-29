@@ -124,7 +124,12 @@ swift test
 
 What was actually verified, and where:
 
-- **Linux (Swift 6.0.3, x86_64), clean build.** After `rm -rf .build`, `swift build -Xswiftc -warnings-as-errors` gives 0 warnings. `swift test` passes **87/87 tests**, stable over 5 consecutive runs.
+- **Linux, locally (Swift 6.0.3, x86_64), clean build.** After `rm -rf .build`, `swift build -Xswiftc -warnings-as-errors` gives 0 warnings. `swift test` passes **87/87 tests**, stable over 5 consecutive runs.
+- **CI on every push to `main`** ([Actions tab](https://github.com/rajatslakhina/trust-incident-remediation-kit/actions)). There are two jobs:
+  - `linux` (the `swift:6.0` container) runs `swift build -Xswiftc -warnings-as-errors` and then `swift test -Xswiftc -warnings-as-errors`.
+  - `apple` (`macos-15`, Xcode 16.4) runs `swift test` on macOS, then `xcodebuild build -scheme TrustRemediation-Package -destination 'generic/platform=iOS Simulator'`. That build compiles both products, including the SwiftUI console, against the iOS Simulator 18.5 SDK.
+  - On Apple platforms, `swift-crypto` (3.15.1) re-exports Apple's CryptoKit. The same Ed25519 tests therefore run against CryptoKit on macOS and against BoringSSL on Linux.
+  - When this section was written, both jobs were green on `main`: 87/87 tests on Linux and on macOS, `** BUILD SUCCEEDED **` for the iOS Simulator, and 0 compiler warnings in either log.
 - **Property checks against broken implementations.** `MutationTests.swift` has reusable checks for five properties: order independence, anti-rollback, the wall-clock floor, single-flight, and stricter-copy-wins on equivocation. Each check is shown to *fail* against a deliberately broken implementation.
 - **Hand-applied mutations of the real source.** Each of the 19 mutations below was applied, the suite was run, and the change was reverted. The count is distinct failing **test cases**, not assertions. Every mutation was caught.
 
@@ -150,9 +155,8 @@ What was actually verified, and where:
 | Ignore latched deadlines | 1 |
 | Don't persist retained restrictions | 1 |
 
-- **Only ever built on Linux.** No part of this package has been built on an Apple platform yet. That includes the CryptoKit path behind `swift-crypto`, the iOS file-protection branch in `FileLedgerPersistence`, and `RemediationConsoleView.swift` (SwiftUI and Observation). The `#if canImport(SwiftUI)` guard keeps the view out of the Linux build, and this machine has no Xcode. Everything it prints goes through `ConsoleText`, which sits outside that guard and is tested on Linux. The `apple` CI job is what will build the SwiftUI layer for the iOS Simulator.
-- **CI:** see the Actions tab. Until a run appears there, no CI result is claimed.
-- **Simulator run:** none. See the demo repo.
+- **Not covered by CI.** The iOS-only file-protection branch in `FileLedgerPersistence` is compiled for iOS, but no test runs on iOS: the tests run on macOS and Linux, and the iOS step is build-only. Everything the console prints goes through `ConsoleText`, which sits outside the SwiftUI `#if` guard and is tested on both.
+- **Simulator run:** see the [demo repo](https://github.com/rajatslakhina/trust-incident-remediation-demo-app), which records exactly what was run on a Simulator.
 
 ## License
 
